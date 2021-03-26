@@ -53,6 +53,8 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, _ *http
 	data := clientListJSON{}
 
 	clients.lock.Lock()
+	defer clients.lock.Unlock()
+
 	for _, c := range clients.list {
 		cj := clientToJSON(c)
 		data.Clients = append(data.Clients, cj)
@@ -82,7 +84,6 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, _ *http
 
 		data.AutoClients = append(data.AutoClients, cj)
 	}
-	clients.lock.Unlock()
 
 	data.Tags = clientTags
 

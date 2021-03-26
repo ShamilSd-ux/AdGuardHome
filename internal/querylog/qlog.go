@@ -22,12 +22,17 @@ const (
 
 // queryLog is a structure that writes and reads the DNS query log
 type queryLog struct {
+	findClient func(ids []string) (c *Client, err error)
+
 	conf    *Config
 	lock    sync.Mutex
 	logFile string // path to the log file
 
-	bufferLock    sync.RWMutex
-	buffer        []*logEntry
+	// bufferLock protects buffer.
+	bufferLock sync.RWMutex
+	// buffer contains recent log entries.
+	buffer []*logEntry
+
 	fileFlushLock sync.Mutex // synchronize a file-flushing goroutine and main thread
 	flushPending  bool       // don't start another goroutine while the previous one is still running
 	fileWriteLock sync.Mutex
@@ -64,6 +69,9 @@ func NewClientProto(s string) (cp ClientProto, err error) {
 
 // logEntry - represents a single log entry
 type logEntry struct {
+	// client is the found client information, if any.
+	client *Client
+
 	IP   net.IP    `json:"IP"` // Client IP
 	Time time.Time `json:"T"`
 
@@ -84,14 +92,28 @@ type logEntry struct {
 
 // create a new instance of the query log
 func newQueryLog(conf Config) *queryLog {
-	l := queryLog{}
-	l.logFile = filepath.Join(conf.BaseDir, queryLogFileName)
+	findClient := conf.FindClient
+	if findClient == nil {
+		findClient = func(_ []string) (_ *Client, _ error) {
+			return nil, nil
+		}
+	}
+
+	l := &queryLog{
+		findClient: findClient,
+
+		logFile: filepath.Join(conf.BaseDir, queryLogFileName),
+	}
+
 	l.conf = &Config{}
 	*l.conf = conf
-	if !checkInterval(l.conf.Interval) {
+
+	if !checkInterval(conf.Interval) {
+		log.Info("querylog: warning: unsupported interval %d, setting to 1", conf.Interval)
 		l.conf.Interval = 1
 	}
-	return &l
+
+	return l
 }
 
 func (l *queryLog) Start() {

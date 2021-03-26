@@ -15,6 +15,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/dhcpd"
 	"github.com/AdguardTeam/AdGuardHome/internal/dnsfilter"
 	"github.com/AdguardTeam/AdGuardHome/internal/dnsforward"
+	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
 	"github.com/AdguardTeam/AdGuardHome/internal/util"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/dnsproxy/upstream"
@@ -262,7 +263,37 @@ func copyStrings(a []string) (b []string) {
 	return append(b, a...)
 }
 
-// Find searches for a client by its ID.
+// findMultiple is a wrapper around Find to make it a valid client finder for
+// the query log.  err is always nil.
+func (clients *clientsContainer) findMultiple(ids []string) (c *querylog.Client, err error) {
+	for _, id := range ids {
+		c, ok := clients.Find(id)
+		if ok {
+			return &querylog.Client{
+				Name: c.Name,
+				IDs:  c.IDs,
+			}, nil
+		}
+
+		ac, ok := clients.FindAutoClient(id)
+		if !ok {
+			continue
+		}
+
+		whois := make(map[string]string, len(ac.WhoisInfo))
+		for _, wi := range ac.WhoisInfo {
+			whois[wi[0]] = wi[1]
+		}
+
+		return &querylog.Client{
+			IDs:   []string{ac.Host},
+			Whois: whois,
+		}, nil
+	}
+
+	return nil, nil
+}
+
 func (clients *clientsContainer) Find(id string) (c *Client, ok bool) {
 	clients.lock.Lock()
 	defer clients.lock.Unlock()

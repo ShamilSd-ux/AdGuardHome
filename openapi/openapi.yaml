@@ -1815,6 +1815,8 @@
             The client ID, if provided in DOH, DOQ, or DOT.
           'example': 'cli123'
           'type': 'string'
+        'client_info':
+          '$ref': '#/components/schemas/QueryLogItemClient'
         'client_proto':
           'enum':
           - 'dot'
@@ -1876,6 +1878,31 @@
           'type': 'string'
           'description': 'DNS request processing start time'
           'example': '2018-11-26T00:02:41+03:00'
+    'QueryLogItemClient':
+      'description': >
+        Client information for a query log item.
+      'properties':
+        'ids':
+          'description': >
+            IP, CIDR, MAC, or client ID.
+          'items':
+            'type': 'string'
+          'type': 'array'
+        'name':
+          'description': >
+            Persistent client's name or an empty string if this is a runtime
+            client.
+          'type': 'string'
+        'whois':
+          'additionalProperties':
+            'type': 'string'
+          'description': >
+            Whois information, if any.
+          'type': 'object'
+      'required':
+      - 'ids'
+      - 'name'
+      'type': 'object'
     'QueryLog':
       'type': 'object'
       'description': 'Query log'
