@@ -72,7 +72,12 @@ func TestQueryLog_Search_findClient(t *testing.T) {
 	})
 
 	sp := &searchParams{
-		olderThan: time.Now(),
+		// Add some time to the "current" one to protect against
+		// low-resolution timers on some Windows machines.
+		//
+		// TODO(a.garipov): Use some kind of timeSource interface
+		// instead of relying on time.Now() in tests.
+		olderThan: time.Now().Add(10 * time.Second),
 		limit:     3,
 	}
 	entries, _ := l.search(sp)
