@@ -163,17 +163,20 @@ func TestClientsWhois(t *testing.T) {
 		testing: true,
 	}
 	clients.Init(nil, nil, nil)
-	whois := [][]string{{"orgname", "orgname-val"}, {"country", "country-val"}}
+	whois := &RuntimeClientWhoisInfo{
+		Country: "AU",
+		Orgname: "Example Org",
+	}
 
 	t.Run("new_client", func(t *testing.T) {
 		clients.SetWhoisInfo("1.1.1.255", whois)
 
 		require.NotNil(t, clients.ipHost["1.1.1.255"])
-		h := clients.ipHost["1.1.1.255"]
 
-		require.Len(t, h.WhoisInfo, 2)
-		require.Len(t, h.WhoisInfo[0], 2)
-		assert.Equal(t, "orgname-val", h.WhoisInfo[0][1])
+		h := clients.ipHost["1.1.1.255"]
+		require.NotNil(t, h)
+
+		assert.Equal(t, h.WhoisInfo, whois)
 	})
 
 	t.Run("existing_auto-client", func(t *testing.T) {
@@ -185,10 +188,9 @@ func TestClientsWhois(t *testing.T) {
 
 		require.NotNil(t, clients.ipHost["1.1.1.1"])
 		h := clients.ipHost["1.1.1.1"]
+		require.NotNil(t, h)
 
-		require.Len(t, h.WhoisInfo, 2)
-		require.Len(t, h.WhoisInfo[0], 2)
-		assert.Equal(t, "orgname-val", h.WhoisInfo[0][1])
+		assert.Equal(t, h.WhoisInfo, whois)
 	})
 
 	t.Run("can't_set_manually-added", func(t *testing.T) {

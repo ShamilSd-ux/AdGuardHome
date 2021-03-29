@@ -22,7 +22,7 @@ type clientJSON struct {
 
 	Upstreams []string `json:"upstreams"`
 
-	WhoisInfo map[string]string `json:"whois_info"`
+	WhoisInfo *RuntimeClientWhoisInfo `json:"whois_info"`
 
 	// Disallowed - if true -- client's IP is not disallowed
 	// Otherwise, it is blocked.
@@ -39,7 +39,7 @@ type clientHostJSON struct {
 	Name   string `json:"name"`
 	Source string `json:"source"`
 
-	WhoisInfo map[string]string `json:"whois_info"`
+	WhoisInfo *RuntimeClientWhoisInfo `json:"whois_info"`
 }
 
 type clientListJSON struct {
@@ -61,8 +61,9 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, _ *http
 	}
 	for ip, ch := range clients.ipHost {
 		cj := clientHostJSON{
-			IP:   ip,
-			Name: ch.Host,
+			IP:        ip,
+			Name:      ch.Host,
+			WhoisInfo: ch.WhoisInfo,
 		}
 
 		cj.Source = "etc/hosts"
@@ -75,11 +76,6 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, _ *http
 			cj.Source = "ARP"
 		case ClientSourceWHOIS:
 			cj.Source = "WHOIS"
-		}
-
-		cj.WhoisInfo = map[string]string{}
-		for _, wi := range ch.WhoisInfo {
-			cj.WhoisInfo[wi[0]] = wi[1]
 		}
 
 		data.AutoClients = append(data.AutoClients, cj)
@@ -137,14 +133,11 @@ func clientToJSON(c *Client) clientJSON {
 // Convert ClientHost object to JSON
 func clientHostToJSON(ip string, ch ClientHost) clientJSON {
 	cj := clientJSON{
-		Name: ch.Host,
-		IDs:  []string{ip},
+		Name:      ch.Host,
+		IDs:       []string{ip},
+		WhoisInfo: ch.WhoisInfo,
 	}
 
-	cj.WhoisInfo = map[string]string{}
-	for _, wi := range ch.WhoisInfo {
-		cj.WhoisInfo[wi[0]] = wi[1]
-	}
 	return cj
 }
 

@@ -82,8 +82,9 @@ func (c *searchCriteria) ctDomainOrClientCase(e *logEntry) bool {
 		return c.ctDomainOrClientCaseStrict(term, clientID, name, host, ip)
 	}
 
-	// TODO(a.garipov): Write a case-insensitive version of
-	// strings.Contains instead of generating garbage.
+	// TODO(a.garipov): Write a case-insensitive version of strings.Contains
+	// instead of generating garbage.  Or, perhaps in the future, use
+	// a locale-appropriate matcher from golang.org/x/text.
 	clientID = strings.ToLower(clientID)
 	host = strings.ToLower(host)
 	ip = strings.ToLower(ip)

@@ -65,7 +65,14 @@ const (
 type ClientHost struct {
 	Host      string
 	Source    clientSource
-	WhoisInfo [][]string // [[key,value], ...]
+	WhoisInfo *RuntimeClientWhoisInfo
+}
+
+// RuntimeClientWhoisInfo is the filtered WHOIS data for a runtime client.
+type RuntimeClientWhoisInfo struct {
+	City    string `json:"city,omitempty"`
+	Country string `json:"country,omitempty"`
+	Orgname string `json:"orgname,omitempty"`
 }
 
 type clientsContainer struct {
@@ -280,9 +287,13 @@ func (clients *clientsContainer) findMultiple(ids []string) (c *querylog.Client,
 			continue
 		}
 
-		whois := make(map[string]string, len(ac.WhoisInfo))
-		for _, wi := range ac.WhoisInfo {
-			whois[wi[0]] = wi[1]
+		var whois *querylog.ClientWhois
+		if wi := ac.WhoisInfo; wi != nil {
+			whois = &querylog.ClientWhois{
+				City:    wi.City,
+				Country: wi.Country,
+				Orgname: wi.Orgname,
+			}
 		}
 
 		return &querylog.Client{
@@ -589,9 +600,7 @@ func (clients *clientsContainer) Update(name string, c *Client) (err error) {
 }
 
 // SetWhoisInfo sets the WHOIS information for a client.
-//
-// TODO(a.garipov): Perhaps replace [][]string with map[string]string.
-func (clients *clientsContainer) SetWhoisInfo(ip string, info [][]string) {
+func (clients *clientsContainer) SetWhoisInfo(ip string, wi *RuntimeClientWhoisInfo) {
 	clients.lock.Lock()
 	defer clients.lock.Unlock()
 
@@ -603,8 +612,8 @@ func (clients *clientsContainer) SetWhoisInfo(ip string, info [][]string) {
 
 	ch, ok := clients.ipHost[ip]
 	if ok {
-		ch.WhoisInfo = info
-		log.Debug("clients: set whois info for auto-client %s: %q", ch.Host, info)
+		ch.WhoisInfo = wi
+		log.Debug("clients: set whois info for auto-client %s: %+v", ch.Host, wi)
 
 		return
 	}
@@ -613,9 +622,9 @@ func (clients *clientsContainer) SetWhoisInfo(ip string, info [][]string) {
 	ch = &ClientHost{
 		Source: ClientSourceWHOIS,
 	}
-	ch.WhoisInfo = info
+	ch.WhoisInfo = wi
 	clients.ipHost[ip] = ch
-	log.Debug("clients: set whois info for auto-client with IP %s: %q", ip, info)
+	log.Debug("clients: set whois info for auto-client with IP %s: %+v", ip, wi)
 }
 
 // AddHost adds a new IP-hostname pairing.  The priorities of the sources is

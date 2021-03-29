@@ -182,29 +182,31 @@ func (w *Whois) queryAll(ctx context.Context, target string) (string, error) {
 }
 
 // Request WHOIS information
-func (w *Whois) process(ctx context.Context, ip net.IP) [][]string {
-	data := [][]string{}
+func (w *Whois) process(ctx context.Context, ip net.IP) (wi *RuntimeClientWhoisInfo) {
 	resp, err := w.queryAll(ctx, ip.String())
 	if err != nil {
 		log.Debug("Whois: error: %s  IP:%s", err, ip)
-		return data
+
+		return nil
 	}
 
 	log.Debug("Whois: IP:%s  response: %d bytes", ip, len(resp))
 
 	m := whoisParse(resp)
 
-	keys := []string{"orgname", "country", "city"}
-	for _, k := range keys {
-		v, found := m[k]
-		if !found {
-			continue
-		}
-		pair := []string{k, v}
-		data = append(data, pair)
+	wi = &RuntimeClientWhoisInfo{
+		City:    m["city"],
+		Country: m["country"],
+		Orgname: m["orgname"],
 	}
 
-	return data
+	// Don't return an empty struct so that the frontend doesn't get
+	// confused.
+	if *wi == (RuntimeClientWhoisInfo{}) {
+		return nil
+	}
+
+	return wi
 }
 
 // Begin - begin requesting WHOIS info
@@ -238,7 +240,7 @@ func (w *Whois) workerLoop() {
 		ip := <-w.ipChan
 
 		info := w.process(context.Background(), ip)
-		if len(info) == 0 {
+		if info == nil {
 			continue
 		}
 

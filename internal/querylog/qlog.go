@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -90,32 +89,6 @@ type logEntry struct {
 	Upstream string `json:",omitempty"` // if empty, means it was cached
 }
 
-// create a new instance of the query log
-func newQueryLog(conf Config) *queryLog {
-	findClient := conf.FindClient
-	if findClient == nil {
-		findClient = func(_ []string) (_ *Client, _ error) {
-			return nil, nil
-		}
-	}
-
-	l := &queryLog{
-		findClient: findClient,
-
-		logFile: filepath.Join(conf.BaseDir, queryLogFileName),
-	}
-
-	l.conf = &Config{}
-	*l.conf = conf
-
-	if !checkInterval(conf.Interval) {
-		log.Info("querylog: warning: unsupported interval %d, setting to 1", conf.Interval)
-		l.conf.Interval = 1
-	}
-
-	return l
-}
-
 func (l *queryLog) Start() {
 	if l.conf.HTTPRegister != nil {
 		l.initWeb()
@@ -160,12 +133,16 @@ func (l *queryLog) clear() {
 }
 
 func (l *queryLog) Add(params AddParams) {
+	var err error
+
 	if !l.conf.Enabled {
 		return
 	}
 
-	if params.Question == nil || len(params.Question.Question) != 1 || len(params.Question.Question[0].Name) == 0 ||
-		params.ClientIP == nil {
+	err = params.validate()
+	if err != nil {
+		log.Error("querylog: adding record: %s, skipping", err)
+
 		return
 	}
 
@@ -190,20 +167,26 @@ func (l *queryLog) Add(params AddParams) {
 	entry.QClass = dns.Class(q.Qclass).String()
 
 	if params.Answer != nil {
-		a, err := params.Answer.Pack()
+		var a []byte
+		a, err = params.Answer.Pack()
 		if err != nil {
-			log.Info("Querylog: Answer.Pack(): %s", err)
+			log.Error("querylog: Answer.Pack(): %s", err)
+
 			return
 		}
+
 		entry.Answer = a
 	}
 
 	if params.OrigAnswer != nil {
-		a, err := params.OrigAnswer.Pack()
+		var a []byte
+		a, err = params.OrigAnswer.Pack()
 		if err != nil {
-			log.Info("Querylog: OrigAnswer.Pack(): %s", err)
+			log.Error("querylog: OrigAnswer.Pack(): %s", err)
+
 			return
 		}
+
 		entry.OrigAnswer = a
 	}
 

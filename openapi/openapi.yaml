@@ -1894,14 +1894,27 @@
             client.
           'type': 'string'
         'whois':
-          'additionalProperties':
-            'type': 'string'
-          'description': >
-            Whois information, if any.
-          'type': 'object'
+          '$ref': '#/components/schemas/QueryLogItemClientWhois'
       'required':
       - 'ids'
       - 'name'
+      'type': 'object'
+    'QueryLogItemClientWhois':
+      'description': >
+        Client WHOIS information, if any.
+      'properties':
+        'city':
+          'description': >
+            City, if any.
+          'type': 'string'
+        'country':
+          'description': >
+            Country, if any.
+          'type': 'string'
+        'orgname':
+          'description': >
+            Organization name, if any.
+          'type': 'string'
       'type': 'object'
     'QueryLog':
       'type': 'object'

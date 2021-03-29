@@ -40,9 +40,6 @@ func (l *queryLog) client(clientID, ip string, cache clientCache) (c *Client, er
 	return c, nil
 }
 
-// unit is a convenient alias for struct{}.
-type unit = struct{}
-
 // searchMemory looks up log records which are currently in the in-memory
 // buffer.  It optionally uses the client cache, if provided.  It also returns
 // the total amount of records in the buffer at the moment of searching.
